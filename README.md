@@ -28,7 +28,7 @@ Progress:
 | 2 | `services/ingestion.py`, `services/pdf_processor.py` — file handling, hashing, text-layer detection, rasterization | done |
 | 3 | `services/llm_client.py`, `services/prompts.py` — LLM/VLM call, transient-failure retry, mock mode | done |
 | 4 | `services/validation.py`, `services/extraction.py` — schema parsing + re-ask, arithmetic checks, orchestration | done |
-| 5 | `api/` + background worker — async `POST /extractions` (returns job id) and `GET /extractions/{id}` | next |
+| 5 | `api/`, `workers/` — async `POST /v1/extractions` (returns job id) and `GET /v1/extractions/{id}` | done |
 
 ### Audit trail
 
@@ -46,6 +46,28 @@ pip install -r requirements-dev.txt
 cp .env.example .env          # MOCK_LLM=true works with no API key
 pytest
 ```
+
+## Running the API
+
+```bash
+uvicorn app.main:app --reload
+```
+
+```bash
+# submit — returns immediately with a job id
+curl -sF file=@invoice.pdf http://localhost:8000/v1/extractions
+# {"job_id": "...", "status": "pending"}
+
+# poll — status is pending | processing | completed | failed
+curl -s http://localhost:8000/v1/extractions/<job_id>
+```
+
+Interactive docs at `http://localhost:8000/docs`.
+
+The POST validates + stores the PDF inline (so bad uploads are rejected on the
+spot) and queues the LLM extraction. For the POC the queue is an in-process
+thread pool (`app/workers/queue.py`); that module is the seam where Celery / RQ /
+SQS drops in for real scale.
 
 ## Configuration
 

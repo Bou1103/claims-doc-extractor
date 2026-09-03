@@ -44,6 +44,31 @@ def garbled_pdf() -> bytes:
 
 
 @pytest.fixture
+def encrypted_pdf() -> bytes:
+    doc = pymupdf.open()
+    doc.new_page().insert_text((72, 100), "confidential invoice")
+    return doc.tobytes(
+        encryption=pymupdf.PDF_ENCRYPT_AES_256, owner_pw="owner", user_pw="user"
+    )
+
+
+@pytest.fixture
+def api_engine(tmp_path):
+    """Point the process-wide engine at an isolated file database."""
+    from sqlmodel import SQLModel, create_engine
+
+    from app.core import database
+
+    engine = create_engine(
+        f"sqlite:///{tmp_path / 'api.db'}", connect_args={"check_same_thread": False}
+    )
+    database.set_engine(engine)
+    SQLModel.metadata.create_all(engine)
+    yield engine
+    database.set_engine(None)
+
+
+@pytest.fixture
 def db_session():
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
     SQLModel.metadata.create_all(engine)

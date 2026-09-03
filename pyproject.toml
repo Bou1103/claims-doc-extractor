@@ -9,4 +9,5 @@ pythonpath = ["."]
 testpaths = ["tests"]
 filterwarnings = [
     "ignore:builtin type .* has no __module__ attribute:DeprecationWarning",
+    "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning",
 ]
