@@ -24,9 +24,10 @@ class Settings(BaseSettings):
 
     # --- llm interaction ---
     anthropic_api_key: str = ""
-    llm_model: str = "claude-opus-5"
+    llm_model: str = "claude-sonnet-5"
     llm_max_attempts: int = 3
     llm_timeout_seconds: float = 60.0
+    llm_max_output_tokens: int = 4096
     # When true, the LLM client returns a deterministic fake result instead of
     # calling the API. Lets the whole pipeline run offline / in CI.
     mock_llm: bool = True
