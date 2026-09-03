@@ -13,7 +13,7 @@ from app.services.llm_client import (
     build_client,
 )
 from app.services.pdf_processor import PageImage, PdfContent
-from app.services.prompts import SYSTEM_PROMPT, build_user_message
+from app.services.prompts import SYSTEM_PROMPT, build_reask_message, build_user_message
 
 _REQUEST = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
 
@@ -180,8 +180,8 @@ def test_user_message_vision_mode_includes_images():
     assert "image" in [b["type"] for b in message["content"]]
 
 
-def test_user_message_appends_feedback():
-    content = PdfContent(page_count=1, input_mode=InputMode.TEXT, text="x")
-    message = build_user_message(content, feedback="missing 'total'")
+def test_reask_message_carries_feedback():
+    message = build_reask_message("missing 'total'")
 
-    assert any("rejected" in b["text"] for b in message["content"] if b["type"] == "text")
+    assert message["role"] == "user"
+    assert "missing 'total'" in message["content"][0]["text"]

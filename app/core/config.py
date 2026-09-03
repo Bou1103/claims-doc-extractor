@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     llm_max_attempts: int = 3
     llm_timeout_seconds: float = 60.0
     llm_max_output_tokens: int = 4096
+    # How many times to re-ask the model with validation feedback before failing.
+    llm_max_reasks: int = 1
     # When true, the LLM client returns a deterministic fake result instead of
     # calling the API. Lets the whole pipeline run offline / in CI.
     mock_llm: bool = True

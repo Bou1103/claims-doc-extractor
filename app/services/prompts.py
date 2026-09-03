@@ -44,9 +44,8 @@ Rules:
 """
 
 
-def build_user_message(content: PdfContent, feedback: str | None = None) -> dict:
-    """Assemble the user turn: document text, or page images, plus optional
-    correction feedback from a previous rejected attempt."""
+def build_user_message(content: PdfContent) -> dict:
+    """The first user turn: the document as text, or as page images."""
     blocks: list[dict] = []
 
     if content.input_mode == InputMode.TEXT:
@@ -69,15 +68,20 @@ def build_user_message(content: PdfContent, feedback: str | None = None) -> dict
                 }
             )
 
-    if feedback:
-        blocks.append(
+    return {"role": "user", "content": blocks}
+
+
+def build_reask_message(feedback: str) -> dict:
+    """A follow-up user turn telling the model why its last reply was rejected."""
+    return {
+        "role": "user",
+        "content": [
             {
                 "type": "text",
                 "text": (
-                    "Your previous response was rejected: "
-                    f"{feedback}\nReturn corrected JSON only."
+                    f"Your previous response was rejected: {feedback}\n"
+                    "Return ONLY the corrected JSON object - no markdown fences, no prose."
                 ),
             }
-        )
-
-    return {"role": "user", "content": blocks}
+        ],
+    }

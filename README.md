@@ -27,8 +27,8 @@ Progress:
 | 1 | config, logging, schemas, data model | done |
 | 2 | `services/ingestion.py`, `services/pdf_processor.py` — file handling, hashing, text-layer detection, rasterization | done |
 | 3 | `services/llm_client.py`, `services/prompts.py` — LLM/VLM call, transient-failure retry, mock mode | done |
-| 4 | `services/validation.py`, `services/extraction.py` — schema parsing + re-ask, arithmetic checks, orchestration | next |
-| 5 | `api/` + background worker — async `POST /extractions` (returns job id) and `GET /extractions/{id}` | |
+| 4 | `services/validation.py`, `services/extraction.py` — schema parsing + re-ask, arithmetic checks, orchestration | done |
+| 5 | `api/` + background worker — async `POST /extractions` (returns job id) and `GET /extractions/{id}` | next |
 
 ### Audit trail
 
