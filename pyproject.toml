@@ -1,0 +1,9 @@
+[project]
+name = "claims-doc-extractor"
+version = "0.1.0"
+description = "Document extraction service for the Claims line of business (POC)"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
