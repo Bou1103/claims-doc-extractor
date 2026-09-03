@@ -29,6 +29,7 @@ Progress:
 | 3 | `services/llm_client.py`, `services/prompts.py` — LLM/VLM call, transient-failure retry, mock mode | done |
 | 4 | `services/validation.py`, `services/extraction.py` — schema parsing + re-ask, arithmetic checks, orchestration | done |
 | 5 | `api/`, `workers/` — async `POST /v1/extractions` (returns job id) and `GET /v1/extractions/{id}` | done |
+| — | `frontend/` — React (Vite) test console | done |
 
 ### Audit trail
 
@@ -62,12 +63,28 @@ curl -sF file=@invoice.pdf http://localhost:8000/v1/extractions
 curl -s http://localhost:8000/v1/extractions/<job_id>
 ```
 
-Interactive docs at `http://localhost:8000/docs`.
+Interactive API docs at `http://localhost:8000/docs`.
 
 The POST validates + stores the PDF inline (so bad uploads are rejected on the
 spot) and queues the LLM extraction. For the POC the queue is an in-process
 thread pool (`app/workers/queue.py`); that module is the seam where Celery / RQ /
 SQS drops in for real scale.
+
+## Test console (`frontend/`)
+
+A small React (Vite) single page to exercise the pipeline by hand: upload a PDF,
+watch `pending → processing → completed/failed`, see the extracted header / line items / warnings or the error. 
+
+```bash
+# one-time
+npm --prefix frontend install
+
+# dev: hot-reload UI on :5173, proxies /v1 + /health to uvicorn on :8000
+npm --prefix frontend run dev
+
+# or build once and let the API serve it at http://localhost:8000/
+npm --prefix frontend run build
+```
 
 ## Configuration
 

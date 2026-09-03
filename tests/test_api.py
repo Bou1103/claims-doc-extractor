@@ -1,5 +1,6 @@
 import json
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.api.app import create_app
@@ -103,3 +104,16 @@ def test_encrypted_pdf_upload_is_422(api_engine, storage, encrypted_pdf):
 def test_health(api_engine, storage):
     with _client(storage, responses=[_GOOD_JSON]) as client:
         assert client.get("/health").json() == {"status": "ok"}
+
+
+def test_frontend_served_when_built(api_engine, storage):
+    from app.api.app import _FRONTEND_DIST
+
+    if not _FRONTEND_DIST.is_dir():
+        pytest.skip("frontend not built (npm --prefix frontend run build)")
+
+    with _client(storage, responses=[_GOOD_JSON]) as client:
+        response = client.get("/")
+
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]

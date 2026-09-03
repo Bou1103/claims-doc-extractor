@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import router
 from app.core.config import Settings, get_settings
@@ -8,6 +10,8 @@ from app.core.database import init_db
 from app.core.logging import configure_logging
 from app.services.storage import LocalFileStorage
 from app.workers.queue import ThreadPoolQueue
+
+_FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 
 
 @asynccontextmanager
@@ -38,5 +42,8 @@ def create_app(*, settings: Settings | None = None, storage=None, queue=None) ->
     @app.get("/health")
     async def health() -> dict:
         return {"status": "ok"}
+
+    if _FRONTEND_DIST.is_dir():
+        app.mount("/", StaticFiles(directory=_FRONTEND_DIST, html=True), name="frontend")
 
     return app
