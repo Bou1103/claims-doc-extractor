@@ -1,31 +1,13 @@
-import json
-
 from sqlmodel import select
 
 from app.core.config import Settings
 from app.models.tables import Extraction, LineItemRecord, ProcessingEvent
 from app.services.extraction import run_extraction
 from app.services.ingestion import ingest_pdf
-from app.services.llm_client import MockLLMClient
+from tests.conftest import DEFAULT_EXTRACTION_JSON as _GOOD_JSON
+from tests.conftest import FakeLLMClient
 
-_GOOD_JSON = json.dumps(
-    {
-        "header": {
-            "vendor_name": "ACME Legal",
-            "invoice_number": "INV-1",
-            "currency": "USD",
-            "subtotal": "100.00",
-            "tax": "5.00",
-            "total": "105.00",
-        },
-        "line_items": [
-            {"description": "Consulting", "quantity": "1", "unit_price": "100.00", "amount": "100.00"}
-        ],
-        "warnings": [],
-    }
-)
-
-_SETTINGS = Settings(mock_llm=True, llm_max_reasks=1)
+_SETTINGS = Settings(llm_max_reasks=1)
 
 
 def _ingest(session, storage, pdf) -> str:
@@ -37,11 +19,11 @@ def test_happy_path_completes_and_persists(db_session, storage, text_invoice_pdf
 
     job = run_extraction(
         db_session, job_id, storage=storage,
-        llm_client=MockLLMClient(responses=[_GOOD_JSON]), settings=_SETTINGS,
+        llm_client=FakeLLMClient(responses=[_GOOD_JSON]), settings=_SETTINGS,
     )
 
     assert job.status == "completed"
-    assert job.model == "mock" and job.prompt_version
+    assert job.model == "fake" and job.prompt_version
 
     extraction = db_session.exec(select(Extraction).where(Extraction.job_id == job_id)).one()
     assert extraction.header["vendor_name"] == "ACME Legal"
@@ -63,7 +45,7 @@ def test_reask_recovers_from_unparseable_output(db_session, storage, text_invoic
 
     job = run_extraction(
         db_session, job_id, storage=storage,
-        llm_client=MockLLMClient(responses=["not json", _GOOD_JSON]), settings=_SETTINGS,
+        llm_client=FakeLLMClient(responses=["not json", _GOOD_JSON]), settings=_SETTINGS,
     )
 
     assert job.status == "completed"
@@ -78,7 +60,7 @@ def test_unparseable_output_fails_job_after_reasks(db_session, storage, text_inv
 
     job = run_extraction(
         db_session, job_id, storage=storage,
-        llm_client=MockLLMClient(responses=["nope", "still nope", "nope again"]),
+        llm_client=FakeLLMClient(responses=["nope", "still nope", "nope again"]),
         settings=_SETTINGS,
     )
 
@@ -98,7 +80,7 @@ def test_transient_llm_failure_marks_job_retryable(db_session, storage, text_inv
 
     job = run_extraction(
         db_session, job_id, storage=storage,
-        llm_client=MockLLMClient(responses=[_GOOD_JSON], transient_failures=99),
+        llm_client=FakeLLMClient(responses=[_GOOD_JSON], transient_failures=99),
         settings=_SETTINGS,
     )
 
@@ -114,7 +96,7 @@ def test_image_only_pdf_flows_through(db_session, storage, image_only_pdf):
 
     job = run_extraction(
         db_session, job_id, storage=storage,
-        llm_client=MockLLMClient(responses=[_GOOD_JSON]), settings=_SETTINGS,
+        llm_client=FakeLLMClient(responses=[_GOOD_JSON]), settings=_SETTINGS,
     )
 
     assert job.status == "completed"

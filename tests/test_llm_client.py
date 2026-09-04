@@ -4,16 +4,15 @@ import pytest
 from tenacity import wait_none
 
 from app.core.config import Settings
-from app.models.schemas import InputMode, InvoiceExtraction
+from app.models.schemas import InputMode
 from app.services.llm_client import (
     AnthropicLLMClient,
     LLMPermanentError,
     LLMTransientError,
-    MockLLMClient,
     build_client,
 )
 from app.services.pdf_processor import PageImage, PdfContent
-from app.services.prompts import SYSTEM_PROMPT, build_reask_message, build_user_message
+from app.services.prompts import build_reask_message, build_user_message
 
 _REQUEST = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
 
@@ -127,33 +126,17 @@ def test_empty_response_is_permanent():
         client.complete(system="s", messages=[])
 
 
-# --- mock client ----------------------------------------------------------
-
-
-def test_mock_client_returns_schema_valid_json():
-    response = MockLLMClient().complete(system=SYSTEM_PROMPT, messages=[])
-    InvoiceExtraction.model_validate_json(response.text)  # must not raise
-
-
-def test_mock_client_scripts_responses_and_failures():
-    client = MockLLMClient(responses=["not json", '{"header": {}}'], transient_failures=1)
-
-    with pytest.raises(LLMTransientError):
-        client.complete(system="s", messages=[])
-    assert client.complete(system="s", messages=[]).text == "not json"
-    assert client.complete(system="s", messages=[]).text == '{"header": {}}'
-
-
 # --- factory ------------------------------------------------------------
 
 
-def test_build_client_returns_mock_when_configured():
-    assert isinstance(build_client(Settings(mock_llm=True)), MockLLMClient)
+def test_build_client_returns_anthropic_client_when_key_is_set():
+    client = build_client(Settings(anthropic_api_key="sk-test", llm_model="claude-test"))
+    assert isinstance(client, AnthropicLLMClient)
 
 
-def test_build_client_requires_key_when_not_mocked():
+def test_build_client_requires_key():
     with pytest.raises(LLMPermanentError):
-        build_client(Settings(mock_llm=False, anthropic_api_key=""))
+        build_client(Settings(anthropic_api_key=""))
 
 
 # --- prompt assembly ----------------------------------------------------

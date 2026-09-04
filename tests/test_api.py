@@ -1,29 +1,13 @@
-import json
-
 import pytest
 from fastapi.testclient import TestClient
 
 from app.api.app import create_app
 from app.core.config import Settings
-from app.services.llm_client import MockLLMClient
 from app.workers.queue import InlineQueue, process_job
+from tests.conftest import DEFAULT_EXTRACTION_JSON as _GOOD_JSON
+from tests.conftest import FakeLLMClient
 
-_TEST_SETTINGS = Settings(mock_llm=True, llm_max_reasks=1)
-
-_GOOD_JSON = json.dumps(
-    {
-        "header": {
-            "vendor_name": "ACME Legal",
-            "invoice_number": "INV-1",
-            "currency": "USD",
-            "subtotal": "100.00",
-            "tax": "5.00",
-            "total": "105.00",
-        },
-        "line_items": [{"description": "Consulting", "amount": "100.00"}],
-        "warnings": [],
-    }
-)
+_TEST_SETTINGS = Settings(llm_max_reasks=1)
 
 
 def _client(storage, *, responses) -> TestClient:
@@ -31,7 +15,7 @@ def _client(storage, *, responses) -> TestClient:
         process_job(
             job_id,
             storage=storage,
-            llm_client=MockLLMClient(responses=responses),
+            llm_client=FakeLLMClient(responses=responses),
             settings=_TEST_SETTINGS,
         )
 

@@ -61,9 +61,6 @@ class InvoiceExtraction(BaseModel):
     )
 
 
-# --- API transfer objects ------------------------------------------------------
-
-
 class JobCreatedResponse(BaseModel):
     job_id: str
     status: JobStatus

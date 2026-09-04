@@ -1,8 +1,48 @@
+import json
+
 import pymupdf
 import pytest
 from sqlmodel import Session, SQLModel, create_engine
 
+from app.services.llm_client import LLMResponse, LLMTransientError
 from app.services.storage import LocalFileStorage
+
+DEFAULT_EXTRACTION_JSON = json.dumps(
+    {
+        "header": {
+            "vendor_name": "ACME Legal",
+            "invoice_number": "INV-1",
+            "currency": "USD",
+            "subtotal": "100.00",
+            "tax": "5.00",
+            "total": "105.00",
+        },
+        "line_items": [{"description": "Consulting", "amount": "100.00"}],
+        "warnings": [],
+    }
+)
+
+
+class FakeLLMClient:
+    """Test double for LLMClient - scripts responses/failures, no network calls.
+
+    ``responses``          - texts returned in order (last one repeats).
+    ``transient_failures`` - raise LLMTransientError on the first N calls.
+    """
+
+    def __init__(self, *, responses: list[str] | None = None, transient_failures: int = 0) -> None:
+        self._responses = list(responses) if responses else [DEFAULT_EXTRACTION_JSON]
+        self._transient_failures = transient_failures
+        self.calls = 0
+
+    def complete(self, *, system: str, messages: list[dict]) -> LLMResponse:
+        self.calls += 1
+        if self.calls <= self._transient_failures:
+            raise LLMTransientError(f"fake transient failure #{self.calls}")
+        index = min(self.calls - self._transient_failures - 1, len(self._responses) - 1)
+        return LLMResponse(
+            text=self._responses[index], model="fake", stop_reason="end_turn", attempts=1
+        )
 
 
 def _text_pdf(body: str) -> bytes:

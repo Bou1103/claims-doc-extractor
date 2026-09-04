@@ -14,7 +14,6 @@ The SDK's own retry layer is disabled (max_retries=0) so retry behaviour lives
 in one visible, testable place.
 """
 
-import json
 from dataclasses import dataclass, field
 
 import anthropic
@@ -49,9 +48,6 @@ class LLMResponse:
     attempts: int
     usage: dict = field(default_factory=dict)
     request_id: str | None = None
-
-
-# --- real client -------------------------------------------------------------
 
 
 class AnthropicLLMClient:
@@ -140,74 +136,10 @@ class AnthropicLLMClient:
         )
 
 
-# --- mock client -----------------------------------------------------------
-
-_MOCK_EXTRACTION = {
-    "header": {
-        "vendor_name": "Mock Vendor Inc.",
-        "vendor_tax_id": None,
-        "client_name": "Compass Data & AI",
-        "invoice_number": "MOCK-0001",
-        "invoice_date": "2025-06-17",
-        "due_date": None,
-        "currency": "CAD",
-        "subtotal": "100.00",
-        "tax": "5.00",
-        "total": "105.00",
-    },
-    "line_items": [
-        {
-            "description": "Mock line item",
-            "quantity": "1",
-            "unit_price": "100.00",
-            "amount": "100.00",
-        }
-    ],
-    "warnings": [],
-}
-
-
-class MockLLMClient:
-    """Deterministic stand-in so the pipeline runs with no API key.
-
-    ``responses``          - texts returned in order (last one repeats).
-    ``transient_failures`` - raise LLMTransientError on the first N calls.
-    """
-
-    def __init__(
-        self,
-        *,
-        responses: list[str] | None = None,
-        transient_failures: int = 0,
-    ) -> None:
-        self._responses = list(responses) if responses else [json.dumps(_MOCK_EXTRACTION)]
-        self._transient_failures = transient_failures
-        self.calls = 0
-
-    def complete(self, *, system: str, messages: list[dict]) -> LLMResponse:
-        self.calls += 1
-        if self.calls <= self._transient_failures:
-            raise LLMTransientError(f"mock transient failure #{self.calls}")
-        index = min(self.calls - self._transient_failures - 1, len(self._responses) - 1)
-        return LLMResponse(
-            text=self._responses[index],
-            model="mock",
-            stop_reason="end_turn",
-            attempts=1,
-        )
-
-
-# --- factory ---------------------------------------------------------------
-
-
-def build_client(settings: Settings | None = None):
+def build_client(settings: Settings | None = None) -> AnthropicLLMClient:
     settings = settings or get_settings()
-    if settings.mock_llm:
-        return MockLLMClient()
     if not settings.anthropic_api_key:
-        raise LLMPermanentError(
-            "ANTHROPIC_API_KEY is not set and MOCK_LLM is false"
-        )
+        raise LLMPermanentError("ANTHROPIC_API_KEY is not set")
     return AnthropicLLMClient(
         api_key=settings.anthropic_api_key,
         model=settings.llm_model,
